@@ -2,16 +2,18 @@
   "use strict";
 
   const SAVE_KEY = "orbit-foundry-save-v1";
+  const SAVE_VERSION = 6;
   const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
   const BASE_CREDIT_PER_MEV = 0.04;
+  const PERMANENT_GRADE_CAP = 8;
 
   const ELEMENTS = [
-    { z: 1, symbol: "H",  en: "Hydrogen",  ko: "수소",   config: "1s¹",         orbital: "1s", multiplier: 1.00, requirement: 120 },
-    { z: 2, symbol: "He", en: "Helium",    ko: "헬륨",   config: "1s²",         orbital: "1s", multiplier: 1.25, requirement: 900 },
-    { z: 3, symbol: "Li", en: "Lithium",   ko: "리튬",   config: "1s² 2s¹",     orbital: "2s", multiplier: 1.65, requirement: 9000 },
-    { z: 4, symbol: "Be", en: "Beryllium", ko: "베릴륨", config: "1s² 2s²",     orbital: "2s", multiplier: 2.20, requirement: 90000 },
-    { z: 5, symbol: "B",  en: "Boron",     ko: "붕소",   config: "1s² 2s² 2p¹", orbital: "2p", multiplier: 3.00, requirement: 900000 },
-    { z: 6, symbol: "C",  en: "Carbon",    ko: "탄소",   config: "1s² 2s² 2p²", orbital: "2p", multiplier: 4.20, requirement: null }
+    { z: 1, symbol: "H",  en: "Hydrogen",  ko: "수소",   config: "1s¹",         orbital: "1s", multiplier: 1.00, requirement: 250,      costScale: 1 },
+    { z: 2, symbol: "He", en: "Helium",    ko: "헬륨",   config: "1s²",         orbital: "1s", multiplier: 1.25, requirement: 1800,     costScale: 1.5 },
+    { z: 3, symbol: "Li", en: "Lithium",   ko: "리튬",   config: "1s² 2s¹",     orbital: "2s", multiplier: 1.65, requirement: 18000,    costScale: 3 },
+    { z: 4, symbol: "Be", en: "Beryllium", ko: "베릴륨", config: "1s² 2s²",     orbital: "2s", multiplier: 2.20, requirement: 180000,   costScale: 8 },
+    { z: 5, symbol: "B",  en: "Boron",     ko: "붕소",   config: "1s² 2s² 2p¹", orbital: "2p", multiplier: 3.00, requirement: 2000000,  costScale: 20 },
+    { z: 6, symbol: "C",  en: "Carbon",    ko: "탄소",   config: "1s² 2s² 2p²", orbital: "2p", multiplier: 4.20, requirement: null,     costScale: 60 }
   ];
 
   const defaultState = () => ({
@@ -32,7 +34,7 @@
     discovered2s: false,
     discovered2p: false,
     discoveredMarket: false,
-    version: 5
+    version: SAVE_VERSION
   });
 
   let state = defaultState();
@@ -41,6 +43,7 @@
   let statusTimer = 0;
   let activeTab = "atom";
   let discoveryQueue = [];
+  let didRepairEconomy = false;
 
   const el = {
     energyValue: document.getElementById("energyValue"),
@@ -136,27 +139,51 @@
     if (!raw || typeof raw !== "object") return base;
 
     const atomIndex = clampInt(raw.atomIndex, 0, ELEMENTS.length - 1);
-    const oldTotal = Math.max(0, finiteOr(raw.totalProduced, finiteOr(raw.totalEarned, 0)));
+    const current = ELEMENTS[atomIndex];
+    const legacyEnergy = Math.max(0, finiteOr(raw.energy, 0));
+    const legacyCredits = Math.max(0, finiteOr(raw.credits, 0));
+    const legacyReactor = Math.max(0, Math.floor(finiteOr(raw.reactorGrade, 0)));
+    const legacyCollector = Math.max(0, Math.floor(finiteOr(raw.collectorGrade, 0)));
+    const legacyConverter = Math.max(0, Math.floor(finiteOr(raw.converterGrade, 0)));
+
+    const brokenLegacyEconomy = Number(raw.version) === 5 && (
+      legacyEnergy > 1e10 ||
+      legacyCredits > 1e9 ||
+      legacyReactor > 12 ||
+      legacyCollector > 12 ||
+      legacyConverter > 12 ||
+      finiteOr(raw.generatorCount, 0) > 200 ||
+      finiteOr(raw.tapUpgradeLevel, 0) > 30 ||
+      finiteOr(raw.generatorUpgradeLevel, 0) > 20
+    );
+
+    if (brokenLegacyEconomy) didRepairEconomy = true;
+
+    const energyCap = current.requirement === null ? 500000 : current.requirement * 0.10;
+    const migratedEnergy = brokenLegacyEconomy ? Math.min(legacyEnergy, energyCap) : legacyEnergy;
+    const migratedCredits = brokenLegacyEconomy
+      ? Math.min(legacyCredits, Math.max(3000, atomIndex * 3000))
+      : legacyCredits;
 
     return {
-      energy: Math.max(0, finiteOr(raw.energy, 0)),
-      credits: Math.max(0, finiteOr(raw.credits, 0)),
-      totalProduced: oldTotal,
+      energy: migratedEnergy,
+      credits: migratedCredits,
+      totalProduced: Math.max(0, finiteOr(raw.totalProduced, finiteOr(raw.totalEarned, 0))),
       totalCredits: Math.max(0, finiteOr(raw.totalCredits, 0)),
       atomIndex,
       sellRatio: atomIndex >= 2 ? Math.max(0, Math.min(.8, finiteOr(raw.sellRatio, 0))) : 0,
-      tapPower: Math.max(1, finiteOr(raw.tapPower, 1)),
-      tapUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.tapUpgradeLevel, 0))),
-      generatorCount: Math.max(0, Math.floor(finiteOr(raw.generatorCount, 0))),
-      generatorUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.generatorUpgradeLevel, 0))),
-      reactorGrade: Math.max(0, Math.floor(finiteOr(raw.reactorGrade, 0))),
-      collectorGrade: Math.max(0, Math.floor(finiteOr(raw.collectorGrade, 0))),
-      converterGrade: Math.max(0, Math.floor(finiteOr(raw.converterGrade, 0))),
+      tapPower: brokenLegacyEconomy ? 1 : Math.max(1, finiteOr(raw.tapPower, 1)),
+      tapUpgradeLevel: brokenLegacyEconomy ? 0 : clampInt(raw.tapUpgradeLevel, 0, 40),
+      generatorCount: brokenLegacyEconomy ? 0 : clampInt(raw.generatorCount, 0, 120),
+      generatorUpgradeLevel: brokenLegacyEconomy ? 0 : clampInt(raw.generatorUpgradeLevel, 0, 24),
+      reactorGrade: brokenLegacyEconomy ? Math.min(legacyReactor, 1) : Math.min(legacyReactor, PERMANENT_GRADE_CAP),
+      collectorGrade: brokenLegacyEconomy ? Math.min(legacyCollector, 1) : Math.min(legacyCollector, PERMANENT_GRADE_CAP),
+      converterGrade: brokenLegacyEconomy ? Math.min(legacyConverter, 1) : Math.min(legacyConverter, PERMANENT_GRADE_CAP),
       lastSavedAt: Math.max(0, finiteOr(raw.lastSavedAt, Date.now())),
       discovered2s: Boolean(raw.discovered2s) || atomIndex >= 2,
       discovered2p: Boolean(raw.discovered2p) || atomIndex >= 4,
       discoveredMarket: Boolean(raw.discoveredMarket) || atomIndex >= 2,
-      version: 5
+      version: SAVE_VERSION
     };
   }
 
@@ -175,12 +202,13 @@
   function formatNumber(value) {
     if (!Number.isFinite(value)) return "0";
     const abs = Math.abs(value);
+    if (abs >= 1e24) return value.toExponential(2);
     if (abs < 1000) {
       if (abs < 10 && value % 1 !== 0) return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
       return Math.floor(value).toLocaleString("ko-KR");
     }
-    const units = [[1e18,"Qi"],[1e15,"Qa"],[1e12,"T"],[1e9,"B"],[1e6,"M"],[1e3,"K"]];
-    for (const [size,suffix] of units) {
+    const units = [[1e21,"Sx"],[1e18,"Qi"],[1e15,"Qa"],[1e12,"T"],[1e9,"B"],[1e6,"M"],[1e3,"K"]];
+    for (const [size, suffix] of units) {
       if (abs >= size) {
         const scaled = value / size;
         const digits = Math.abs(scaled) >= 100 ? 0 : Math.abs(scaled) >= 10 ? 1 : 2;
@@ -193,6 +221,9 @@
   function formatEnergy(mev) {
     if (!Number.isFinite(mev)) return "0 MeV";
     const abs = Math.abs(mev);
+    if (abs >= 1e18) return `${(mev / 1e18).toExponential(2)} ZeV`;
+    if (abs >= 1e12) return `${formatNumber(mev / 1e12)} EeV`;
+    if (abs >= 1e9) return `${formatNumber(mev / 1e9)} PeV`;
     if (abs >= 1e6) return `${formatNumber(mev / 1e6)} TeV`;
     if (abs >= 1000) return `${formatNumber(mev / 1000)} GeV`;
     return `${formatNumber(mev)} MeV`;
@@ -207,27 +238,27 @@
   }
 
   function generatorCost() {
-    return Math.floor(20 * Math.pow(1.17, state.generatorCount));
+    return Math.floor(45 * currentElement().costScale * Math.pow(1.21, state.generatorCount));
   }
 
   function tapUpgradeCost() {
-    return Math.floor(12 * Math.pow(1.78, state.tapUpgradeLevel));
+    return Math.floor(30 * currentElement().costScale * Math.pow(1.90, state.tapUpgradeLevel));
   }
 
   function generatorUpgradeCost() {
-    return Math.floor(85 * Math.pow(2.30, state.generatorUpgradeLevel));
+    return Math.floor(250 * currentElement().costScale * Math.pow(2.90, state.generatorUpgradeLevel));
   }
 
   function reactorGradeCost() {
-    return Math.ceil(40 * Math.pow(1.9, state.reactorGrade));
+    return Math.ceil(3000 * Math.pow(15, state.reactorGrade));
   }
 
   function collectorGradeCost() {
-    return Math.ceil(65 * Math.pow(2.0, state.collectorGrade));
+    return Math.ceil(6000 * Math.pow(18, state.collectorGrade));
   }
 
   function converterGradeCost() {
-    return Math.ceil(90 * Math.pow(2.05, state.converterGrade));
+    return Math.ceil(12000 * Math.pow(22, state.converterGrade));
   }
 
   function automationMultiplier() {
@@ -353,24 +384,27 @@
 
   function renderPermanentEquipment() {
     const locked = !marketUnlocked();
-    const rCost = reactorGradeCost();
-    const cCost = collectorGradeCost();
-    const xCost = converterGradeCost();
+    const rMax = state.reactorGrade >= PERMANENT_GRADE_CAP;
+    const cMax = state.collectorGrade >= PERMANENT_GRADE_CAP;
+    const xMax = state.converterGrade >= PERMANENT_GRADE_CAP;
+    const rCost = rMax ? Infinity : reactorGradeCost();
+    const cCost = cMax ? Infinity : collectorGradeCost();
+    const xCost = xMax ? Infinity : converterGradeCost();
 
     el.reactorGradeLevel.textContent = `G${state.reactorGrade}`;
     el.reactorGradeBonus.textContent = `x${reactorGradeMultiplier().toFixed(2)}`;
-    el.reactorGradeCost.textContent = formatCredits(rCost);
-    el.buyReactorGrade.disabled = locked || state.credits < rCost;
+    el.reactorGradeCost.textContent = rMax ? "MAX" : formatCredits(rCost);
+    el.buyReactorGrade.disabled = locked || rMax || state.credits < rCost;
 
     el.collectorGradeLevel.textContent = `G${state.collectorGrade}`;
     el.collectorGradeBonus.textContent = `x${collectorGradeMultiplier().toFixed(2)}`;
-    el.collectorGradeCost.textContent = formatCredits(cCost);
-    el.buyCollectorGrade.disabled = locked || state.credits < cCost;
+    el.collectorGradeCost.textContent = cMax ? "MAX" : formatCredits(cCost);
+    el.buyCollectorGrade.disabled = locked || cMax || state.credits < cCost;
 
     el.converterGradeLevel.textContent = `G${state.converterGrade}`;
     el.converterGradeBonus.textContent = `x${converterGradeMultiplier().toFixed(2)}`;
-    el.converterGradeCost.textContent = formatCredits(xCost);
-    el.buyConverterGrade.disabled = locked || state.credits < xCost;
+    el.converterGradeCost.textContent = xMax ? "MAX" : formatCredits(xCost);
+    el.buyConverterGrade.disabled = locked || xMax || state.credits < xCost;
 
     renderEquipmentVisuals();
   }
@@ -513,6 +547,7 @@
     }[type];
     if (!config) return;
     const [costFn, key, message] = config;
+    if (state[key] >= PERMANENT_GRADE_CAP) return;
     const cost = costFn();
     if (!spendCredits(cost)) return;
     state[key] += 1;
@@ -691,6 +726,7 @@
   loadGame();
   switchTab(activeTab);
   render(true);
+  if (didRepairEconomy) setStatus("폭주한 경제 수치를 정상 범위로 재조정했습니다");
   requestAnimationFrame((now) => {
     lastTick = now;
     requestAnimationFrame(tick);
