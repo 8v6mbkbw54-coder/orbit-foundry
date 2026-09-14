@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#070b16" />
   <title>Orbit Foundry</title>
-  <link rel="stylesheet" href="style.css?v=0.5.0" />
+  <link rel="stylesheet" href="style.css?v=0.5.1" />
 </head>
 <body data-atomic="1" data-orbital="1s" data-market="locked">
   <main class="app-shell">
@@ -66,7 +66,7 @@
     <section class="progress-ribbon" aria-label="현재 성장 계층">
       <div><span>ELEMENT</span><strong id="ribbonElement">H · Z1</strong></div>
       <div><span>ORBITAL</span><strong id="ribbonOrbital">1s</strong></div>
-      <div><span>EQUIPMENT</span><strong id="ribbonEquipment">G0 · C0 · X0</strong></div>
+      <div><span>EQUIPMENT</span><strong id="ribbonEquipment">R0 · C0 · X0</strong></div>
     </section>
 
     <nav class="section-tabs" aria-label="게임 시스템">
@@ -116,12 +116,12 @@
             <div class="synthesis-copy">
               <span class="label">NEXT FACILITY</span>
               <strong id="nextElementName">He · Helium</strong>
-              <small id="synthesisRequirementText">0 / 120 MeV</small>
+              <small id="synthesisRequirementText">0 / 250 MeV</small>
             </div>
             <div class="synthesis-progress" aria-hidden="true"><span id="synthesisProgressBar"></span></div>
             <button id="synthesizeButton" class="synthesis-button" type="button" disabled>
               <span>SHUT DOWN & REMODEL</span>
-              <small id="synthesisButtonHint">120 MeV 필요</small>
+              <small id="synthesisButtonHint">250 MeV 필요</small>
             </button>
           </div>
 
@@ -172,19 +172,19 @@
           <button id="buyReactorGrade" class="upgrade-card permanent-upgrade" type="button">
             <div class="upgrade-icon">R</div>
             <div class="upgrade-copy"><strong>Reactor Grade <b id="reactorGradeLevel">G0</b></strong><span>모든 수동·자동 Reaction Energy 생산량 증가</span></div>
-            <div class="upgrade-price"><span id="reactorGradeBonus">x1.00</span><strong id="reactorGradeCost">₡ 40</strong></div>
+            <div class="upgrade-price"><span id="reactorGradeBonus">x1.00</span><strong id="reactorGradeCost">₡ 3,000</strong></div>
           </button>
 
           <button id="buyCollectorGrade" class="upgrade-card permanent-upgrade" type="button">
             <div class="upgrade-icon">C</div>
             <div class="upgrade-copy"><strong>Collector Grade <b id="collectorGradeLevel">G0</b></strong><span>입자 수집기의 자동 생산 효율 증가</span></div>
-            <div class="upgrade-price"><span id="collectorGradeBonus">x1.00</span><strong id="collectorGradeCost">₡ 65</strong></div>
+            <div class="upgrade-price"><span id="collectorGradeBonus">x1.00</span><strong id="collectorGradeCost">₡ 6,000</strong></div>
           </button>
 
           <button id="buyConverterGrade" class="upgrade-card permanent-upgrade" type="button">
             <div class="upgrade-icon">X</div>
             <div class="upgrade-copy"><strong>Converter Grade <b id="converterGradeLevel">G0</b></strong><span>판매 에너지를 Credits로 변환하는 효율 증가</span></div>
-            <div class="upgrade-price"><span id="converterGradeBonus">x1.00</span><strong id="converterGradeCost">₡ 90</strong></div>
+            <div class="upgrade-price"><span id="converterGradeBonus">x1.00</span><strong id="converterGradeCost">₡ 12,000</strong></div>
           </button>
         </div>
 
@@ -201,19 +201,19 @@
           <button id="buyGenerator" class="upgrade-card" type="button">
             <div class="upgrade-icon">P</div>
             <div class="upgrade-copy"><strong>입자 수집기</strong><span>Reaction Energy를 초당 자동 생산합니다.</span></div>
-            <div class="upgrade-price"><span id="generatorPower">+1 MeV/s</span><strong id="generatorCost">25 MeV</strong></div>
+            <div class="upgrade-price"><span id="generatorPower">+1 MeV/s</span><strong id="generatorCost">45 MeV</strong></div>
           </button>
 
           <button id="buyTapUpgrade" class="upgrade-card" type="button">
             <div class="upgrade-icon">T</div>
             <div class="upgrade-copy"><strong>반응 펄스 조정</strong><span>탭 1회의 기본 반응 에너지 발생량을 증가시킵니다.</span></div>
-            <div class="upgrade-price"><span id="tapUpgradePower">+1 MeV</span><strong id="tapUpgradeCost">15 MeV</strong></div>
+            <div class="upgrade-price"><span id="tapUpgradePower">+1 MeV</span><strong id="tapUpgradeCost">30 MeV</strong></div>
           </button>
 
           <button id="buyGeneratorUpgrade" class="upgrade-card" type="button">
             <div class="upgrade-icon">A</div>
             <div class="upgrade-copy"><strong>자동 운전 제어</strong><span>현재 시설의 모든 입자 수집기 생산을 강화합니다.</span></div>
-            <div class="upgrade-price"><span id="generatorMultiplier">x1.00</span><strong id="generatorUpgradeCost">100 MeV</strong></div>
+            <div class="upgrade-price"><span id="generatorMultiplier">x1.00</span><strong id="generatorUpgradeCost">250 MeV</strong></div>
           </button>
         </div>
       </section>
@@ -245,7 +245,7 @@
 
     <footer>
       <span id="statusText">시스템 정상</span>
-      <span>v0.5.0</span>
+      <span>v0.5.1</span>
     </footer>
   </main>
 
@@ -286,6 +286,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=0.5.0"></script>
+  <script src="game.js?v=0.5.1"></script>
 </body>
 </html>
