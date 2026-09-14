@@ -5,12 +5,12 @@
   const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 
   const ELEMENTS = [
-    { z: 1, symbol: "H",  en: "Hydrogen",  ko: "수소",   config: "1s¹",          orbital: "1s", multiplier: 1.00, requirement: 250 },
-    { z: 2, symbol: "He", en: "Helium",    ko: "헬륨",   config: "1s²",          orbital: "1s", multiplier: 1.40, requirement: 1500 },
-    { z: 3, symbol: "Li", en: "Lithium",   ko: "리튬",   config: "1s² 2s¹",      orbital: "2s", multiplier: 1.90, requirement: 7000 },
-    { z: 4, symbol: "Be", en: "Beryllium", ko: "베릴륨", config: "1s² 2s²",      orbital: "2s", multiplier: 2.60, requirement: 30000 },
-    { z: 5, symbol: "B",  en: "Boron",     ko: "붕소",   config: "1s² 2s² 2p¹",  orbital: "2p", multiplier: 3.60, requirement: 120000 },
-    { z: 6, symbol: "C",  en: "Carbon",    ko: "탄소",   config: "1s² 2s² 2p²",  orbital: "2p", multiplier: 5.00, requirement: null }
+    { z: 1, symbol: "H",  en: "Hydrogen",  ko: "수소",   config: "1s¹",         orbital: "1s", multiplier: 1.00, requirement: 250 },
+    { z: 2, symbol: "He", en: "Helium",    ko: "헬륨",   config: "1s²",         orbital: "1s", multiplier: 1.40, requirement: 1500 },
+    { z: 3, symbol: "Li", en: "Lithium",   ko: "리튬",   config: "1s² 2s¹",     orbital: "2s", multiplier: 1.90, requirement: 7000 },
+    { z: 4, symbol: "Be", en: "Beryllium", ko: "베릴륨", config: "1s² 2s²",     orbital: "2s", multiplier: 2.60, requirement: 30000 },
+    { z: 5, symbol: "B",  en: "Boron",     ko: "붕소",   config: "1s² 2s² 2p¹", orbital: "2p", multiplier: 3.60, requirement: 120000 },
+    { z: 6, symbol: "C",  en: "Carbon",    ko: "탄소",   config: "1s² 2s² 2p²", orbital: "2p", multiplier: 5.00, requirement: null }
   ];
 
   const SPACE_ORBITS = [
@@ -33,13 +33,14 @@
     lastSavedAt: Date.now(),
     discovered2s: false,
     discovered2p: false,
-    version: 3
+    version: 4
   });
 
   let state = defaultState();
   let lastTick = performance.now();
   let lastRenderedFrame = -1;
   let statusTimer = 0;
+  let activeTab = "atom";
 
   const el = {
     energyValue: document.getElementById("energyValue"),
@@ -53,6 +54,14 @@
     orbitalFamily: document.getElementById("orbitalFamily"),
     tapValue: document.getElementById("tapValue"),
     floatingLayer: document.getElementById("floatingLayer"),
+    ribbonElement: document.getElementById("ribbonElement"),
+    ribbonOrbital: document.getElementById("ribbonOrbital"),
+    ribbonMultiplier: document.getElementById("ribbonMultiplier"),
+    sectionTabs: Array.from(document.querySelectorAll(".section-tab")),
+    tabPanels: Array.from(document.querySelectorAll(".tab-panel")),
+    atomTabBadge: document.getElementById("atomTabBadge"),
+    facilityTabBadge: document.getElementById("facilityTabBadge"),
+    orbitTabBadge: document.getElementById("orbitTabBadge"),
     atomicMultiplier: document.getElementById("atomicMultiplier"),
     configurationDetail: document.getElementById("configurationDetail"),
     activeOrbital: document.getElementById("activeOrbital"),
@@ -72,7 +81,10 @@
     generatorMultiplier: document.getElementById("generatorMultiplier"),
     generatorUpgradeCost: document.getElementById("generatorUpgradeCost"),
     buyGeneratorUpgrade: document.getElementById("buyGeneratorUpgrade"),
+    macroPanel: document.getElementById("macroPanel"),
     spaceOrbitBadge: document.getElementById("spaceOrbitBadge"),
+    spaceOrbitStatus: document.getElementById("spaceOrbitStatus"),
+    spaceOrbitRequirement: document.getElementById("spaceOrbitRequirement"),
     saveButton: document.getElementById("saveButton"),
     statusText: document.getElementById("statusText"),
     offlineModal: document.getElementById("offlineModal"),
@@ -126,7 +138,7 @@
       lastSavedAt: Math.max(0, finiteOr(raw.lastSavedAt, Date.now())),
       discovered2s: Boolean(raw.discovered2s) || atomIndex >= 2,
       discovered2p: Boolean(raw.discovered2p) || atomIndex >= 4,
-      version: 3
+      version: 4
     };
   }
 
@@ -140,6 +152,10 @@
 
   function currentSpaceOrbit() {
     return SPACE_ORBITS[state.spaceOrbitIndex] || SPACE_ORBITS[0];
+  }
+
+  function orbitLayerReady() {
+    return state.atomIndex >= ELEMENTS.length - 1;
   }
 
   function formatNumber(value) {
@@ -210,6 +226,45 @@
     return element.requirement !== null && state.atomEarned >= element.requirement && state.atomIndex < ELEMENTS.length - 1;
   }
 
+  function switchTab(tabName) {
+    if (!el.tabPanels.some((panel) => panel.dataset.panel === tabName)) return;
+    activeTab = tabName;
+
+    el.sectionTabs.forEach((button) => {
+      const selected = button.dataset.tab === tabName;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+
+    el.tabPanels.forEach((panel) => {
+      panel.classList.toggle("hidden", panel.dataset.panel !== tabName);
+    });
+  }
+
+  function renderNavigation() {
+    const element = currentElement();
+    const space = currentSpaceOrbit();
+    const ready = orbitLayerReady();
+
+    document.body.dataset.orbitReady = ready ? "true" : "false";
+    el.ribbonElement.textContent = `${element.symbol} · Z${element.z}`;
+    el.ribbonOrbital.textContent = element.orbital;
+    el.ribbonMultiplier.textContent = `x${permanentMultiplier().toFixed(2)}`;
+    el.atomTabBadge.textContent = element.symbol;
+    el.facilityTabBadge.textContent = String(state.generatorCount);
+    el.orbitTabBadge.textContent = ready ? space.short : "LOCK";
+
+    el.spaceOrbitBadge.textContent = `${space.short} · x${space.multiplier}`;
+    if (ready) {
+      el.spaceOrbitStatus.textContent = "Carbon · Z6 도달 완료";
+      el.spaceOrbitRequirement.textContent = "상위 프레스티지 계층 해금 조건 완료";
+    } else {
+      const remaining = ELEMENTS.length - 1 - state.atomIndex;
+      el.spaceOrbitStatus.textContent = "Carbon · Z6 도달";
+      el.spaceOrbitRequirement.textContent = `현재 ${element.symbol} · 앞으로 ${remaining}개 원소`;
+    }
+  }
+
   function renderElement() {
     const element = currentElement();
     const next = nextElement();
@@ -232,15 +287,13 @@
       cell.classList.toggle("complete", index < state.atomIndex);
     });
 
-    const space = currentSpaceOrbit();
-    el.spaceOrbitBadge.textContent = `${space.short} · x${space.multiplier}`;
-
     if (!next || element.requirement === null) {
       el.nextElementName.textContent = "C · Carbon — 현재 테스트 최종 원소";
       el.synthesisRequirementText.textContent = `${formatNumber(state.atomEarned)} ENERGY 생산`;
       el.synthesisProgressBar.style.width = "100%";
       el.synthesizeButton.disabled = true;
-      el.synthesisButtonHint.textContent = "다음 원소 준비 중";
+      el.synthesisButtonHint.textContent = "상위 계층 확인";
+      renderNavigation();
       return;
     }
 
@@ -252,6 +305,8 @@
     el.synthesisButtonHint.textContent = canSynthesize()
       ? `Z=${next.z} 합성 가능`
       : `${formatNumber(Math.max(0, element.requirement - state.atomEarned))} 필요`;
+
+    renderNavigation();
   }
 
   function render(force = false) {
@@ -386,6 +441,7 @@
     if (discovered2pNow) state.discovered2p = true;
 
     closeSynthesisModal();
+    switchTab("atom");
     saveGame(false);
     setStatus(`${destination.symbol} 합성 완료 · 원자번호 ${destination.z}`);
     render(true);
@@ -457,6 +513,10 @@
     requestAnimationFrame(tick);
   }
 
+  el.sectionTabs.forEach((button) => {
+    button.addEventListener("click", () => switchTab(button.dataset.tab));
+  });
+
   el.reactorButton.addEventListener("click", tapReactor);
   el.reactorButton.addEventListener("pointerdown", () => el.reactorButton.classList.add("pressed"));
   window.addEventListener("pointerup", () => el.reactorButton.classList.remove("pressed"));
@@ -484,6 +544,7 @@
   window.setInterval(() => saveGame(false), 5000);
 
   loadGame();
+  switchTab(activeTab);
   render(true);
   requestAnimationFrame((now) => {
     lastTick = now;
