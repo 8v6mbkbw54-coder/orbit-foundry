@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#08111f" />
+  <title>Orbit Foundry</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">ORBITAL INDUSTRIES</p>
+        <h1>ORBIT FOUNDRY</h1>
+      </div>
+      <button id="saveButton" class="ghost-button" type="button">저장</button>
+    </header>
+
+    <section class="stats-card" aria-label="자원 현황">
+      <div class="resource-block">
+        <span class="label">ENERGY</span>
+        <strong id="energyValue">0</strong>
+        <small id="perSecondValue">+0 / sec</small>
+      </div>
+      <div class="resource-block compact">
+        <span class="label">CORE LEVEL</span>
+        <strong id="coreLevelValue">1</strong>
+      </div>
+    </section>
+
+    <section class="reactor-section">
+      <div class="orbit orbit-a"></div>
+      <div class="orbit orbit-b"></div>
+      <button id="reactorButton" class="reactor" type="button" aria-label="반응로 가동">
+        <span class="reactor-glow"></span>
+        <span class="reactor-core"></span>
+        <span class="reactor-label">TAP</span>
+      </button>
+      <p id="tapValue" class="tap-value">탭당 +1</p>
+      <div id="floatingLayer" class="floating-layer" aria-hidden="true"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">PRODUCTION</p>
+          <h2>시설</h2>
+        </div>
+        <span id="generatorCount" class="pill">0 units</span>
+      </div>
+
+      <button id="buyGenerator" class="upgrade-card" type="button">
+        <div class="upgrade-icon">G</div>
+        <div class="upgrade-copy">
+          <strong>궤도 발전기</strong>
+          <span>초당 에너지를 자동 생산합니다.</span>
+        </div>
+        <div class="upgrade-price">
+          <span id="generatorPower">+1/s</span>
+          <strong id="generatorCost">25</strong>
+        </div>
+      </button>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">UPGRADES</p>
+          <h2>반응로 강화</h2>
+        </div>
+      </div>
+
+      <button id="buyTapUpgrade" class="upgrade-card" type="button">
+        <div class="upgrade-icon">T</div>
+        <div class="upgrade-copy">
+          <strong>자기장 압축</strong>
+          <span>탭 1회의 에너지 생산량을 증가시킵니다.</span>
+        </div>
+        <div class="upgrade-price">
+          <span id="tapUpgradePower">+1 tap</span>
+          <strong id="tapUpgradeCost">15</strong>
+        </div>
+      </button>
+
+      <button id="buyGeneratorUpgrade" class="upgrade-card" type="button">
+        <div class="upgrade-icon">A</div>
+        <div class="upgrade-copy">
+          <strong>자동화 프로토콜</strong>
+          <span>모든 발전기의 생산량을 강화합니다.</span>
+        </div>
+        <div class="upgrade-price">
+          <span id="generatorMultiplier">x1.00</span>
+          <strong id="generatorUpgradeCost">100</strong>
+        </div>
+      </button>
+    </section>
+
+    <footer>
+      <span id="statusText">시스템 정상</span>
+      <span>v0.1.0</span>
+    </footer>
+  </main>
+
+  <div id="offlineModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="offlineTitle">
+    <div class="modal-card">
+      <p class="eyebrow">WELCOME BACK</p>
+      <h2 id="offlineTitle">오프라인 생산 완료</h2>
+      <p id="offlineText">자리를 비운 동안 에너지를 생산했습니다.</p>
+      <button id="offlineClose" class="primary-button" type="button">수령</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
