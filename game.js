@@ -4,48 +4,36 @@
   const SAVE_KEY = "orbit-foundry-save-v1";
   const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 
-  const ORBITS = [
-    {
-      short: "LEO",
-      name: "저궤도 · LEO",
-      multiplier: 1,
-      requirement: 5000,
-      description: "지구 가까이에서 시작하는 첫 산업 궤도입니다. 빠른 건설과 짧은 물류 주기로 기반을 만듭니다."
-    },
-    {
-      short: "MEO",
-      name: "중궤도 · MEO",
-      multiplier: 2,
-      requirement: 100000,
-      description: "더 넓은 운영 반경을 확보한 중궤도입니다. 모든 에너지 생산량이 영구적으로 두 배가 됩니다."
-    },
-    {
-      short: "GEO",
-      name: "정지궤도 · GEO",
-      multiplier: 5,
-      requirement: 2000000,
-      description: "지구와 동기화된 대형 산업 궤도입니다. 안정적인 자동화로 생산 규모가 크게 확장됩니다."
-    },
-    {
-      short: "LUNAR",
-      name: "달 궤도 · LUNAR",
-      multiplier: 12,
-      requirement: null,
-      description: "지구권을 벗어나 달 산업권에 진입했습니다. 현재 빌드에서 도달할 수 있는 최종 궤도입니다."
-    }
+  const ELEMENTS = [
+    { z: 1, symbol: "H",  en: "Hydrogen",  ko: "수소",   config: "1s¹",          orbital: "1s", multiplier: 1.00, requirement: 250 },
+    { z: 2, symbol: "He", en: "Helium",    ko: "헬륨",   config: "1s²",          orbital: "1s", multiplier: 1.40, requirement: 1500 },
+    { z: 3, symbol: "Li", en: "Lithium",   ko: "리튬",   config: "1s² 2s¹",      orbital: "2s", multiplier: 1.90, requirement: 7000 },
+    { z: 4, symbol: "Be", en: "Beryllium", ko: "베릴륨", config: "1s² 2s²",      orbital: "2s", multiplier: 2.60, requirement: 30000 },
+    { z: 5, symbol: "B",  en: "Boron",     ko: "붕소",   config: "1s² 2s² 2p¹",  orbital: "2p", multiplier: 3.60, requirement: 120000 },
+    { z: 6, symbol: "C",  en: "Carbon",    ko: "탄소",   config: "1s² 2s² 2p²",  orbital: "2p", multiplier: 5.00, requirement: null }
+  ];
+
+  const SPACE_ORBITS = [
+    { short: "LEO", multiplier: 1 },
+    { short: "MEO", multiplier: 2 },
+    { short: "GEO", multiplier: 5 },
+    { short: "LUNAR", multiplier: 12 }
   ];
 
   const defaultState = () => ({
     energy: 0,
     totalEarned: 0,
-    orbitEarned: 0,
-    orbitIndex: 0,
+    atomEarned: 0,
+    atomIndex: 0,
+    spaceOrbitIndex: 0,
     tapPower: 1,
     tapUpgradeLevel: 0,
     generatorCount: 0,
     generatorUpgradeLevel: 0,
     lastSavedAt: Date.now(),
-    version: 2
+    discovered2s: false,
+    discovered2p: false,
+    version: 3
   });
 
   let state = defaultState();
@@ -56,19 +44,24 @@
   const el = {
     energyValue: document.getElementById("energyValue"),
     perSecondValue: document.getElementById("perSecondValue"),
-    orbitShortName: document.getElementById("orbitShortName"),
-    orbitMultiplierTop: document.getElementById("orbitMultiplierTop"),
+    elementSymbol: document.getElementById("elementSymbol"),
+    atomicNumberValue: document.getElementById("atomicNumberValue"),
+    elementName: document.getElementById("elementName"),
     reactorButton: document.getElementById("reactorButton"),
+    reactorSymbol: document.getElementById("reactorSymbol"),
+    electronConfig: document.getElementById("electronConfig"),
+    orbitalFamily: document.getElementById("orbitalFamily"),
     tapValue: document.getElementById("tapValue"),
     floatingLayer: document.getElementById("floatingLayer"),
-    orbitName: document.getElementById("orbitName"),
-    orbitMultiplier: document.getElementById("orbitMultiplier"),
-    orbitDescription: document.getElementById("orbitDescription"),
-    nextOrbitName: document.getElementById("nextOrbitName"),
-    transferRequirementText: document.getElementById("transferRequirementText"),
-    transferProgressBar: document.getElementById("transferProgressBar"),
-    transferOrbitButton: document.getElementById("transferOrbitButton"),
-    transferButtonHint: document.getElementById("transferButtonHint"),
+    atomicMultiplier: document.getElementById("atomicMultiplier"),
+    configurationDetail: document.getElementById("configurationDetail"),
+    activeOrbital: document.getElementById("activeOrbital"),
+    elementCells: Array.from(document.querySelectorAll(".element-cell")),
+    nextElementName: document.getElementById("nextElementName"),
+    synthesisRequirementText: document.getElementById("synthesisRequirementText"),
+    synthesisProgressBar: document.getElementById("synthesisProgressBar"),
+    synthesizeButton: document.getElementById("synthesizeButton"),
+    synthesisButtonHint: document.getElementById("synthesisButtonHint"),
     generatorCount: document.getElementById("generatorCount"),
     generatorPower: document.getElementById("generatorPower"),
     generatorCost: document.getElementById("generatorCost"),
@@ -79,52 +72,74 @@
     generatorMultiplier: document.getElementById("generatorMultiplier"),
     generatorUpgradeCost: document.getElementById("generatorUpgradeCost"),
     buyGeneratorUpgrade: document.getElementById("buyGeneratorUpgrade"),
+    spaceOrbitBadge: document.getElementById("spaceOrbitBadge"),
     saveButton: document.getElementById("saveButton"),
     statusText: document.getElementById("statusText"),
     offlineModal: document.getElementById("offlineModal"),
     offlineText: document.getElementById("offlineText"),
     offlineClose: document.getElementById("offlineClose"),
-    transferModal: document.getElementById("transferModal"),
-    transferModalText: document.getElementById("transferModalText"),
-    transferFromOrbit: document.getElementById("transferFromOrbit"),
-    transferToOrbit: document.getElementById("transferToOrbit"),
-    transferBonusText: document.getElementById("transferBonusText"),
-    transferCancel: document.getElementById("transferCancel"),
-    transferConfirm: document.getElementById("transferConfirm"),
-    routeNodes: Array.from(document.querySelectorAll(".route-node"))
+    synthesisModal: document.getElementById("synthesisModal"),
+    synthesisModalText: document.getElementById("synthesisModalText"),
+    synthesisFrom: document.getElementById("synthesisFrom"),
+    synthesisTo: document.getElementById("synthesisTo"),
+    synthesisBonusText: document.getElementById("synthesisBonusText"),
+    synthesisCancel: document.getElementById("synthesisCancel"),
+    synthesisConfirm: document.getElementById("synthesisConfirm"),
+    discoveryModal: document.getElementById("discoveryModal"),
+    discoveryGlyph: document.getElementById("discoveryGlyph"),
+    discoveryTitle: document.getElementById("discoveryTitle"),
+    discoveryText: document.getElementById("discoveryText"),
+    discoveryClose: document.getElementById("discoveryClose")
   };
 
   function finiteOr(value, fallback) {
-    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function clampInt(value, min, max) {
+    return Math.max(min, Math.min(max, Math.floor(finiteOr(value, min))));
   }
 
   function sanitizeState(raw) {
     const base = defaultState();
     if (!raw || typeof raw !== "object") return base;
 
-    const orbitIndex = Math.max(0, Math.min(ORBITS.length - 1, Math.floor(finiteOr(raw.orbitIndex, 0))));
     const legacyTotal = Math.max(0, finiteOr(raw.totalEarned, 0));
+    const atomIndex = clampInt(raw.atomIndex, 0, ELEMENTS.length - 1);
+    const legacyOrbitIndex = raw.spaceOrbitIndex ?? raw.orbitIndex ?? 0;
+    const spaceOrbitIndex = clampInt(legacyOrbitIndex, 0, SPACE_ORBITS.length - 1);
+    const migratedAtomEarned = raw.version >= 3
+      ? finiteOr(raw.atomEarned, 0)
+      : finiteOr(raw.orbitEarned, legacyTotal);
 
     return {
-      energy: Math.max(0, finiteOr(raw.energy, base.energy)),
+      energy: Math.max(0, finiteOr(raw.energy, 0)),
       totalEarned: legacyTotal,
-      orbitEarned: Math.max(0, finiteOr(raw.orbitEarned, raw.version >= 2 ? 0 : legacyTotal)),
-      orbitIndex,
-      tapPower: Math.max(1, finiteOr(raw.tapPower, base.tapPower)),
-      tapUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.tapUpgradeLevel, base.tapUpgradeLevel))),
-      generatorCount: Math.max(0, Math.floor(finiteOr(raw.generatorCount, base.generatorCount))),
-      generatorUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.generatorUpgradeLevel, base.generatorUpgradeLevel))),
+      atomEarned: Math.max(0, migratedAtomEarned),
+      atomIndex,
+      spaceOrbitIndex,
+      tapPower: Math.max(1, finiteOr(raw.tapPower, 1)),
+      tapUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.tapUpgradeLevel, 0))),
+      generatorCount: Math.max(0, Math.floor(finiteOr(raw.generatorCount, 0))),
+      generatorUpgradeLevel: Math.max(0, Math.floor(finiteOr(raw.generatorUpgradeLevel, 0))),
       lastSavedAt: Math.max(0, finiteOr(raw.lastSavedAt, Date.now())),
-      version: 2
+      discovered2s: Boolean(raw.discovered2s) || atomIndex >= 2,
+      discovered2p: Boolean(raw.discovered2p) || atomIndex >= 4,
+      version: 3
     };
   }
 
-  function currentOrbit() {
-    return ORBITS[state.orbitIndex];
+  function currentElement() {
+    return ELEMENTS[state.atomIndex];
   }
 
-  function nextOrbit() {
-    return ORBITS[state.orbitIndex + 1] || null;
+  function nextElement() {
+    return ELEMENTS[state.atomIndex + 1] || null;
+  }
+
+  function currentSpaceOrbit() {
+    return SPACE_ORBITS[state.spaceOrbitIndex] || SPACE_ORBITS[0];
   }
 
   function formatNumber(value) {
@@ -133,12 +148,12 @@
       if (value < 10 && value % 1 !== 0) return value.toFixed(1);
       return Math.floor(value).toLocaleString("ko-KR");
     }
-
     const units = [[1e18, "Qi"], [1e15, "Qa"], [1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"]];
     for (const [size, suffix] of units) {
       if (value >= size) {
         const scaled = value / size;
-        return `${scaled >= 100 ? scaled.toFixed(0) : scaled >= 10 ? scaled.toFixed(1) : scaled.toFixed(2)}${suffix}`;
+        const digits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
+        return `${scaled.toFixed(digits)}${suffix}`;
       }
     }
     return Math.floor(value).toLocaleString("ko-KR");
@@ -160,16 +175,16 @@
     return Math.pow(1.8, state.generatorUpgradeLevel);
   }
 
-  function orbitMultiplier() {
-    return currentOrbit().multiplier;
+  function permanentMultiplier() {
+    return currentElement().multiplier * currentSpaceOrbit().multiplier;
   }
 
   function effectiveTapPower() {
-    return state.tapPower * orbitMultiplier();
+    return state.tapPower * permanentMultiplier();
   }
 
   function generatorUnitPower() {
-    return automationMultiplier() * orbitMultiplier();
+    return automationMultiplier() * permanentMultiplier();
   }
 
   function energyPerSecond() {
@@ -180,7 +195,7 @@
     if (!Number.isFinite(amount) || amount <= 0) return;
     state.energy += amount;
     state.totalEarned += amount;
-    state.orbitEarned += amount;
+    state.atomEarned += amount;
   }
 
   function spendEnergy(amount) {
@@ -190,42 +205,53 @@
     return true;
   }
 
-  function canTransferOrbit() {
-    const orbit = currentOrbit();
-    return orbit.requirement !== null && state.orbitEarned >= orbit.requirement && state.orbitIndex < ORBITS.length - 1;
+  function canSynthesize() {
+    const element = currentElement();
+    return element.requirement !== null && state.atomEarned >= element.requirement && state.atomIndex < ELEMENTS.length - 1;
   }
 
-  function renderOrbit() {
-    const orbit = currentOrbit();
-    const next = nextOrbit();
-    document.body.dataset.orbit = String(state.orbitIndex);
+  function renderElement() {
+    const element = currentElement();
+    const next = nextElement();
 
-    el.orbitShortName.textContent = orbit.short;
-    el.orbitMultiplierTop.textContent = `x${orbit.multiplier.toFixed(2)} output`;
-    el.orbitName.textContent = orbit.name;
-    el.orbitMultiplier.textContent = `생산 x${orbit.multiplier.toFixed(2)}`;
-    el.orbitDescription.textContent = orbit.description;
+    document.body.dataset.atomic = String(element.z);
+    document.body.dataset.orbital = element.orbital;
 
-    el.routeNodes.forEach((node, index) => {
-      node.classList.toggle("active", index === state.orbitIndex);
-      node.classList.toggle("complete", index < state.orbitIndex);
+    el.elementSymbol.textContent = element.symbol;
+    el.atomicNumberValue.textContent = String(element.z);
+    el.elementName.textContent = `${element.en} · ${element.ko}`;
+    el.reactorSymbol.textContent = element.symbol;
+    el.electronConfig.textContent = element.config;
+    el.orbitalFamily.textContent = `${element.orbital.endsWith("p") ? "p" : "s"} ORBITAL`;
+    el.atomicMultiplier.textContent = `원소 x${element.multiplier.toFixed(2)}`;
+    el.configurationDetail.textContent = element.config;
+    el.activeOrbital.textContent = element.orbital;
+
+    el.elementCells.forEach((cell, index) => {
+      cell.classList.toggle("active", index === state.atomIndex);
+      cell.classList.toggle("complete", index < state.atomIndex);
     });
 
-    if (!next || orbit.requirement === null) {
-      el.nextOrbitName.textContent = "현재 공개된 최종 궤도";
-      el.transferRequirementText.textContent = `${formatNumber(state.orbitEarned)} ENERGY 생산`;
-      el.transferProgressBar.style.width = "100%";
-      el.transferOrbitButton.disabled = true;
-      el.transferButtonHint.textContent = "다음 경로 준비 중";
+    const space = currentSpaceOrbit();
+    el.spaceOrbitBadge.textContent = `${space.short} · x${space.multiplier}`;
+
+    if (!next || element.requirement === null) {
+      el.nextElementName.textContent = "C · Carbon — 현재 테스트 최종 원소";
+      el.synthesisRequirementText.textContent = `${formatNumber(state.atomEarned)} ENERGY 생산`;
+      el.synthesisProgressBar.style.width = "100%";
+      el.synthesizeButton.disabled = true;
+      el.synthesisButtonHint.textContent = "다음 원소 준비 중";
       return;
     }
 
-    const progress = Math.max(0, Math.min(1, state.orbitEarned / orbit.requirement));
-    el.nextOrbitName.textContent = next.name;
-    el.transferRequirementText.textContent = `${formatNumber(state.orbitEarned)} / ${formatNumber(orbit.requirement)} ENERGY`;
-    el.transferProgressBar.style.width = `${progress * 100}%`;
-    el.transferOrbitButton.disabled = !canTransferOrbit();
-    el.transferButtonHint.textContent = canTransferOrbit() ? `${next.short} 진입 가능` : `${formatNumber(Math.max(0, orbit.requirement - state.orbitEarned))} 필요`;
+    const progress = Math.max(0, Math.min(1, state.atomEarned / element.requirement));
+    el.nextElementName.textContent = `${next.symbol} · ${next.en}`;
+    el.synthesisRequirementText.textContent = `${formatNumber(state.atomEarned)} / ${formatNumber(element.requirement)} ENERGY`;
+    el.synthesisProgressBar.style.width = `${progress * 100}%`;
+    el.synthesizeButton.disabled = !canSynthesize();
+    el.synthesisButtonHint.textContent = canSynthesize()
+      ? `Z=${next.z} 합성 가능`
+      : `${formatNumber(Math.max(0, element.requirement - state.atomEarned))} 필요`;
   }
 
   function render(force = false) {
@@ -237,7 +263,6 @@
     const genCost = generatorCost();
     const tapCost = tapUpgradeCost();
     const autoCost = generatorUpgradeCost();
-    const autoMult = automationMultiplier();
     const nextTapIncrease = Math.max(1, Math.floor(state.tapPower * 0.75));
 
     el.energyValue.textContent = formatNumber(state.energy);
@@ -249,15 +274,16 @@
     el.generatorCost.textContent = formatNumber(genCost);
     el.buyGenerator.disabled = state.energy < genCost;
 
-    el.tapUpgradePower.textContent = `+${formatNumber(nextTapIncrease * orbitMultiplier())} tap`;
+    el.tapUpgradePower.textContent = `+${formatNumber(nextTapIncrease * permanentMultiplier())} tap`;
     el.tapUpgradeCost.textContent = formatNumber(tapCost);
     el.buyTapUpgrade.disabled = state.energy < tapCost;
 
+    const autoMult = automationMultiplier();
     el.generatorMultiplier.textContent = `x${autoMult.toFixed(autoMult < 10 ? 2 : 1)}`;
     el.generatorUpgradeCost.textContent = formatNumber(autoCost);
     el.buyGeneratorUpgrade.disabled = state.energy < autoCost;
 
-    renderOrbit();
+    renderElement();
   }
 
   function showFloatingNumber(clientX, clientY, amount) {
@@ -285,7 +311,7 @@
     const cost = generatorCost();
     if (!spendEnergy(cost)) return;
     state.generatorCount += 1;
-    setStatus("궤도 발전기 배치 완료");
+    setStatus("입자 수집기 배치 완료");
     render(true);
   }
 
@@ -294,7 +320,7 @@
     if (!spendEnergy(cost)) return;
     state.tapUpgradeLevel += 1;
     state.tapPower += Math.max(1, Math.floor(state.tapPower * 0.75));
-    setStatus("자기장 압축 업그레이드 완료");
+    setStatus("핵 압축 업그레이드 완료");
     render(true);
   }
 
@@ -302,47 +328,70 @@
     const cost = generatorUpgradeCost();
     if (!spendEnergy(cost)) return;
     state.generatorUpgradeLevel += 1;
-    setStatus("자동화 프로토콜 갱신 완료");
+    setStatus("오비탈 자동화 갱신 완료");
     render(true);
   }
 
-  function openTransferModal() {
-    if (!canTransferOrbit()) return;
-    const from = currentOrbit();
-    const to = nextOrbit();
+  function openSynthesisModal() {
+    if (!canSynthesize()) return;
+    const from = currentElement();
+    const to = nextElement();
     if (!to) return;
 
-    el.transferModalText.textContent = "궤도 이전 시 현재 에너지, 발전기, 자기장 압축, 자동화 업그레이드가 초기화됩니다. 누적 생산 기록과 도달한 궤도는 유지됩니다.";
-    el.transferFromOrbit.textContent = from.short;
-    el.transferToOrbit.textContent = to.short;
-    el.transferBonusText.textContent = `새 궤도 영구 생산 배율 x${to.multiplier.toFixed(2)}`;
-    el.transferModal.classList.remove("hidden");
+    el.synthesisModalText.textContent = "원자번호 승급 시 현재 에너지, 입자 수집기, 핵 압축, 오비탈 자동화가 초기화됩니다. 합성한 원소와 상위 우주 궤도 기록은 영구적으로 유지됩니다.";
+    el.synthesisFrom.textContent = `${from.symbol} · ${from.z}`;
+    el.synthesisTo.textContent = `${to.symbol} · ${to.z}`;
+    el.synthesisBonusText.textContent = `새 원소 영구 생산 배율 x${to.multiplier.toFixed(2)} · ${to.config}`;
+    el.synthesisModal.classList.remove("hidden");
   }
 
-  function closeTransferModal() {
-    el.transferModal.classList.add("hidden");
+  function closeSynthesisModal() {
+    el.synthesisModal.classList.add("hidden");
   }
 
-  function confirmTransfer() {
-    if (!canTransferOrbit()) {
-      closeTransferModal();
+  function showOrbitalDiscovery(orbital) {
+    if (orbital === "2s") {
+      el.discoveryGlyph.textContent = "2s";
+      el.discoveryTitle.textContent = "2s 오비탈 발견";
+      el.discoveryText.textContent = "두 번째 전자껍질이 열렸습니다. 원자 주변에 더 넓은 s 오비탈 확률 구름이 형성됩니다.";
+    } else {
+      el.discoveryGlyph.textContent = "2p";
+      el.discoveryTitle.textContent = "p 오비탈 발견";
+      el.discoveryText.textContent = "구형 s 오비탈을 넘어 방향성을 가진 p 오비탈이 열렸습니다. 원자의 외형과 성장 단계가 크게 확장됩니다.";
+    }
+    el.discoveryModal.classList.remove("hidden");
+  }
+
+  function confirmSynthesis() {
+    if (!canSynthesize()) {
+      closeSynthesisModal();
       return;
     }
 
-    const destination = nextOrbit();
-    state.orbitIndex += 1;
+    const destination = nextElement();
+    if (!destination) return;
+
+    state.atomIndex += 1;
     state.energy = 0;
-    state.orbitEarned = 0;
+    state.atomEarned = 0;
     state.tapPower = 1;
     state.tapUpgradeLevel = 0;
     state.generatorCount = 0;
     state.generatorUpgradeLevel = 0;
     state.lastSavedAt = Date.now();
 
-    closeTransferModal();
+    const discovered2sNow = destination.orbital === "2s" && !state.discovered2s;
+    const discovered2pNow = destination.orbital === "2p" && !state.discovered2p;
+    if (discovered2sNow) state.discovered2s = true;
+    if (discovered2pNow) state.discovered2p = true;
+
+    closeSynthesisModal();
     saveGame(false);
-    setStatus(`${destination.short} 궤도 진입 완료`);
+    setStatus(`${destination.symbol} 합성 완료 · 원자번호 ${destination.z}`);
     render(true);
+
+    if (discovered2sNow) window.setTimeout(() => showOrbitalDiscovery("2s"), 180);
+    if (discovered2pNow) window.setTimeout(() => showOrbitalDiscovery("2p"), 180);
   }
 
   function setStatus(message) {
@@ -350,7 +399,7 @@
     window.clearTimeout(statusTimer);
     statusTimer = window.setTimeout(() => {
       el.statusText.textContent = "시스템 정상";
-    }, 1800);
+    }, 1900);
   }
 
   function saveGame(showFeedback = false) {
@@ -364,6 +413,15 @@
     }
   }
 
+  function formatDuration(seconds) {
+    const totalMinutes = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) return `${hours}시간 ${minutes}분`;
+    if (minutes > 0) return `${minutes}분`;
+    return `${Math.floor(seconds)}초`;
+  }
+
   function loadGame() {
     let parsed = null;
     try {
@@ -374,9 +432,11 @@
     }
 
     state = sanitizeState(parsed);
+
     const now = Date.now();
     const elapsed = Math.max(0, Math.min(MAX_OFFLINE_SECONDS, (now - state.lastSavedAt) / 1000));
-    const offlineGain = elapsed >= 10 ? energyPerSecond() * elapsed : 0;
+    const eps = energyPerSecond();
+    const offlineGain = elapsed >= 10 ? eps * elapsed : 0;
 
     if (offlineGain > 0) {
       addEnergy(offlineGain);
@@ -386,15 +446,6 @@
 
     state.lastSavedAt = now;
     saveGame(false);
-  }
-
-  function formatDuration(seconds) {
-    const totalMinutes = Math.floor(seconds / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours > 0) return `${hours}시간 ${minutes}분`;
-    if (minutes > 0) return `${minutes}분`;
-    return `${Math.floor(seconds)}초`;
   }
 
   function tick(now) {
@@ -410,24 +461,25 @@
   el.reactorButton.addEventListener("pointerdown", () => el.reactorButton.classList.add("pressed"));
   window.addEventListener("pointerup", () => el.reactorButton.classList.remove("pressed"));
   window.addEventListener("pointercancel", () => el.reactorButton.classList.remove("pressed"));
+
   el.buyGenerator.addEventListener("click", buyGenerator);
   el.buyTapUpgrade.addEventListener("click", buyTapUpgrade);
   el.buyGeneratorUpgrade.addEventListener("click", buyGeneratorUpgrade);
-  el.transferOrbitButton.addEventListener("click", openTransferModal);
-  el.transferCancel.addEventListener("click", closeTransferModal);
-  el.transferConfirm.addEventListener("click", confirmTransfer);
+  el.synthesizeButton.addEventListener("click", openSynthesisModal);
+  el.synthesisCancel.addEventListener("click", closeSynthesisModal);
+  el.synthesisConfirm.addEventListener("click", confirmSynthesis);
+  el.discoveryClose.addEventListener("click", () => el.discoveryModal.classList.add("hidden"));
   el.saveButton.addEventListener("click", () => saveGame(true));
   el.offlineClose.addEventListener("click", () => el.offlineModal.classList.add("hidden"));
 
-  el.transferModal.addEventListener("click", (event) => {
-    if (event.target === el.transferModal) closeTransferModal();
+  el.synthesisModal.addEventListener("click", (event) => {
+    if (event.target === el.synthesisModal) closeSynthesisModal();
   });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") saveGame(false);
     else lastTick = performance.now();
   });
-
   window.addEventListener("pagehide", () => saveGame(false));
   window.setInterval(() => saveGame(false), 5000);
 
