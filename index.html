@@ -7,7 +7,7 @@
   <title>Orbit Foundry</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body data-atomic="1" data-orbital="1s">
+<body data-atomic="1" data-orbital="1s" data-orbit-ready="false">
   <main class="app-shell">
     <header class="topbar">
       <div>
@@ -52,110 +52,145 @@
       <div id="floatingLayer" class="floating-layer" aria-hidden="true"></div>
     </section>
 
-    <section class="panel atomic-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">PERIODIC PROGRESSION</p>
-          <h2>원자번호 승급</h2>
-        </div>
-        <span id="atomicMultiplier" class="pill">생산 x1.00</span>
-      </div>
-
-      <div class="element-strip" id="elementStrip" aria-label="현재 구현 원소">
-        <div class="element-cell active" data-element-index="0"><small>1</small><strong>H</strong><span>수소</span></div>
-        <div class="element-cell" data-element-index="1"><small>2</small><strong>He</strong><span>헬륨</span></div>
-        <div class="element-cell" data-element-index="2"><small>3</small><strong>Li</strong><span>리튬</span></div>
-        <div class="element-cell" data-element-index="3"><small>4</small><strong>Be</strong><span>베릴륨</span></div>
-        <div class="element-cell" data-element-index="4"><small>5</small><strong>B</strong><span>붕소</span></div>
-        <div class="element-cell" data-element-index="5"><small>6</small><strong>C</strong><span>탄소</span></div>
-      </div>
-
-      <div class="configuration-card">
-        <div>
-          <span class="label">ELECTRON CONFIGURATION</span>
-          <strong id="configurationDetail">1s¹</strong>
-        </div>
-        <div>
-          <span class="label">ACTIVE ORBITAL</span>
-          <strong id="activeOrbital">1s</strong>
-        </div>
-      </div>
-
-      <div class="synthesis-card">
-        <div class="synthesis-copy">
-          <span class="label">NEXT ELEMENT</span>
-          <strong id="nextElementName">He · Helium</strong>
-          <small id="synthesisRequirementText">0 / 600 ENERGY</small>
-        </div>
-        <div class="synthesis-progress" aria-hidden="true"><span id="synthesisProgressBar"></span></div>
-        <button id="synthesizeButton" class="synthesis-button" type="button" disabled>
-          <span>SYNTHESIZE NEXT ELEMENT</span>
-          <small id="synthesisButtonHint">600 필요</small>
-        </button>
-      </div>
+    <section class="progress-ribbon" aria-label="현재 성장 계층">
+      <div><span>ELEMENT</span><strong id="ribbonElement">H · Z1</strong></div>
+      <div><span>ORBITAL</span><strong id="ribbonOrbital">1s</strong></div>
+      <div><span>PERMANENT</span><strong id="ribbonMultiplier">x1.00</strong></div>
     </section>
 
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">PRODUCTION</p>
-          <h2>원자 생산 시설</h2>
-        </div>
-        <span id="generatorCount" class="pill">0 units</span>
-      </div>
-
-      <button id="buyGenerator" class="upgrade-card" type="button">
-        <div class="upgrade-icon">G</div>
-        <div class="upgrade-copy">
-          <strong>입자 수집기</strong>
-          <span>현재 원소의 에너지를 초당 자동 생산합니다.</span>
-        </div>
-        <div class="upgrade-price"><span id="generatorPower">+1/s</span><strong id="generatorCost">25</strong></div>
+    <nav class="section-tabs" aria-label="게임 시스템">
+      <button class="section-tab active" type="button" data-tab="atom" aria-selected="true">
+        <span>ATOM</span><small id="atomTabBadge">H</small>
       </button>
-    </section>
-
-    <section class="panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">UPGRADES</p>
-          <h2>반응로 강화</h2>
-        </div>
-      </div>
-
-      <button id="buyTapUpgrade" class="upgrade-card" type="button">
-        <div class="upgrade-icon">T</div>
-        <div class="upgrade-copy">
-          <strong>핵 압축</strong>
-          <span>탭 1회의 기본 에너지 생성량을 증가시킵니다.</span>
-        </div>
-        <div class="upgrade-price"><span id="tapUpgradePower">+1 tap</span><strong id="tapUpgradeCost">15</strong></div>
+      <button class="section-tab" type="button" data-tab="facility" aria-selected="false">
+        <span>FACILITY</span><small id="facilityTabBadge">0</small>
       </button>
-
-      <button id="buyGeneratorUpgrade" class="upgrade-card" type="button">
-        <div class="upgrade-icon">A</div>
-        <div class="upgrade-copy">
-          <strong>오비탈 자동화</strong>
-          <span>모든 입자 수집기의 생산 효율을 강화합니다.</span>
-        </div>
-        <div class="upgrade-price"><span id="generatorMultiplier">x1.00</span><strong id="generatorUpgradeCost">100</strong></div>
+      <button class="section-tab" type="button" data-tab="orbit" aria-selected="false">
+        <span>ORBIT</span><small id="orbitTabBadge">LOCK</small>
       </button>
-    </section>
+    </nav>
 
-    <section class="panel macro-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">MACRO ORBIT</p>
-          <h2>우주 궤도 이전</h2>
+    <div class="tab-stack">
+      <section class="tab-panel" data-panel="atom">
+        <div class="panel atomic-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">PERIODIC PROGRESSION</p>
+              <h2>원자번호 승급</h2>
+            </div>
+            <span id="atomicMultiplier" class="pill">원소 x1.00</span>
+          </div>
+
+          <div class="element-strip" id="elementStrip" aria-label="현재 구현 원소">
+            <div class="element-cell active" data-element-index="0"><small>1</small><strong>H</strong><span>수소</span></div>
+            <div class="element-cell" data-element-index="1"><small>2</small><strong>He</strong><span>헬륨</span></div>
+            <div class="element-cell" data-element-index="2"><small>3</small><strong>Li</strong><span>리튬</span></div>
+            <div class="element-cell" data-element-index="3"><small>4</small><strong>Be</strong><span>베릴륨</span></div>
+            <div class="element-cell" data-element-index="4"><small>5</small><strong>B</strong><span>붕소</span></div>
+            <div class="element-cell" data-element-index="5"><small>6</small><strong>C</strong><span>탄소</span></div>
+          </div>
+
+          <div class="configuration-card">
+            <div>
+              <span class="label">ELECTRON CONFIGURATION</span>
+              <strong id="configurationDetail">1s¹</strong>
+            </div>
+            <div>
+              <span class="label">ACTIVE ORBITAL</span>
+              <strong id="activeOrbital">1s</strong>
+            </div>
+          </div>
+
+          <div class="synthesis-card">
+            <div class="synthesis-copy">
+              <span class="label">NEXT ELEMENT</span>
+              <strong id="nextElementName">He · Helium</strong>
+              <small id="synthesisRequirementText">0 / 250 ENERGY</small>
+            </div>
+            <div class="synthesis-progress" aria-hidden="true"><span id="synthesisProgressBar"></span></div>
+            <button id="synthesizeButton" class="synthesis-button" type="button" disabled>
+              <span>SYNTHESIZE NEXT ELEMENT</span>
+              <small id="synthesisButtonHint">250 필요</small>
+            </button>
+          </div>
         </div>
-        <span id="spaceOrbitBadge" class="pill">LEO · x1</span>
-      </div>
-      <p class="macro-copy">원자번호 프레스티지보다 위에 놓이는 상위 성장 계층입니다. C 이후의 원소 확장과 함께 다시 연결할 예정입니다.</p>
-      <div class="locked-system">ATOMIC TEST PHASE · H → C</div>
-    </section>
+      </section>
+
+      <section class="tab-panel hidden" data-panel="facility">
+        <div class="panel facility-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">PRODUCTION & UPGRADES</p>
+              <h2>생산 시설</h2>
+            </div>
+            <span id="generatorCount" class="pill">0 units</span>
+          </div>
+
+          <p class="panel-intro">현재 원소에서 생산 기반을 키웁니다. 원자번호 승급 시 이 계층은 초기화됩니다.</p>
+
+          <button id="buyGenerator" class="upgrade-card" type="button">
+            <div class="upgrade-icon">G</div>
+            <div class="upgrade-copy">
+              <strong>입자 수집기</strong>
+              <span>현재 원소의 에너지를 초당 자동 생산합니다.</span>
+            </div>
+            <div class="upgrade-price"><span id="generatorPower">+1/s</span><strong id="generatorCost">25</strong></div>
+          </button>
+
+          <div class="subsection-title"><span>REACTOR UPGRADES</span><i></i></div>
+
+          <button id="buyTapUpgrade" class="upgrade-card" type="button">
+            <div class="upgrade-icon">T</div>
+            <div class="upgrade-copy">
+              <strong>핵 압축</strong>
+              <span>탭 1회의 기본 에너지 생성량을 증가시킵니다.</span>
+            </div>
+            <div class="upgrade-price"><span id="tapUpgradePower">+1 tap</span><strong id="tapUpgradeCost">15</strong></div>
+          </button>
+
+          <button id="buyGeneratorUpgrade" class="upgrade-card" type="button">
+            <div class="upgrade-icon">A</div>
+            <div class="upgrade-copy">
+              <strong>오비탈 자동화</strong>
+              <span>모든 입자 수집기의 생산 효율을 강화합니다.</span>
+            </div>
+            <div class="upgrade-price"><span id="generatorMultiplier">x1.00</span><strong id="generatorUpgradeCost">100</strong></div>
+          </button>
+        </div>
+      </section>
+
+      <section class="tab-panel hidden" data-panel="orbit">
+        <div class="panel macro-panel" id="macroPanel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">MACRO PRESTIGE</p>
+              <h2>우주 궤도 이전</h2>
+            </div>
+            <span id="spaceOrbitBadge" class="pill">LEO · x1</span>
+          </div>
+
+          <div class="prestige-layers" aria-label="프레스티지 계층">
+            <div class="prestige-layer complete"><span>01</span><div><strong>Atomic Number</strong><small>H → C → … → Og</small></div></div>
+            <div class="prestige-link"></div>
+            <div class="prestige-layer active"><span>02</span><div><strong>s / p / d / f Orbital</strong><small>전자 구조에 따른 시스템 확장</small></div></div>
+            <div class="prestige-link"></div>
+            <div class="prestige-layer locked" id="spacePrestigeLayer"><span>03</span><div><strong>Space Orbit</strong><small>LEO → MEO → GEO → LUNAR</small></div></div>
+          </div>
+
+          <div class="orbit-gate" id="orbitGate">
+            <span class="label">UNLOCK CONDITION</span>
+            <strong id="spaceOrbitStatus">Carbon · Z6 도달</strong>
+            <small id="spaceOrbitRequirement">현재 H · 앞으로 5개 원소</small>
+          </div>
+
+          <p class="macro-copy">우주 궤도는 원자 프레스티지 위에 놓이는 상위 계층입니다. 현재 빌드에서는 구조와 해금 조건을 먼저 정리했습니다.</p>
+        </div>
+      </section>
+    </div>
 
     <footer>
       <span id="statusText">시스템 정상</span>
-      <span>v0.3.0</span>
+      <span>v0.4.0</span>
     </footer>
   </main>
 
